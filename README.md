@@ -21,7 +21,7 @@ can also optionally be sorted.
 ## Documentation
 
 For examples and all the details, please see the [asciitree
-godocs](https://godoc.org/github.com/thediveo/asciitree).
+godocs](https://godoc.org/github.com/thediveo/go-asciitree).
 
 ## Copyright and License
 
