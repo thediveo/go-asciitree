@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/github.com/TheDiveO/go-asciitree?status.svg)](https://godoc.org/github.com/TheDiveO/go-asciitree)
+
 # asciitree
 
 `asciitree` is a Go package for simple pretty-printing of tree-like
