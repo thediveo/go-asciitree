@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/github.com/TheDiveO/go-asciitree?status.svg)](https://godoc.org/github.com/TheDiveO/go-asciitree)
+
 # asciitree
 
 [![GoDoc](https://godoc.org/github.com/TheDiveO/go-asciitree?status.svg)](http://godoc.org/github.com/TheDiveO/go-asciitree)
