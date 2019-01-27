@@ -38,7 +38,7 @@ var _ = Describe("Styler", func() {
 	Describe("helpers", func() {
 		Context("repeat()", func() {
 			It("doesn't panic when repeating a string less than zero times", func() {
-				Expect(func() { repeat("foo", -1) }).ToNot(Panic())
+				Expect(func() { repeat("foo", -1) }).ToNot(Panic()) // nolint staticcheck
 			})
 
 			It("returns an empty string when not repeating", func() {

@@ -3,5 +3,13 @@
 		{
 			"path": ".."
 		}
-	]
+	],
+	"settings": {
+		"go.lintTool": "golangci-lint",
+		"go.coverageDecorator": {
+			"type": "highlight",
+			"coveredHighlightColor": "rgba(0,64,0,0.05)",
+			"uncoveredHighlightColor": "rgba(128,0,0,0.1)"
+		},
+	}
 }

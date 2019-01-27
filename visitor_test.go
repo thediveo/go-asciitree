@@ -23,6 +23,7 @@ import (
 
 var _ = Describe("visiting", func() {
 
+	// nolint structcheck
 	type S struct {
 		bar int
 		Foo string `asciitree:"label"`
@@ -37,6 +38,7 @@ var _ = Describe("visiting", func() {
 		},
 	}
 
+	// nolint structcheck
 	type RS struct {
 		fake  bool `asciitree:"label"`
 		Rootz []S  `asciitree:"roots"`
@@ -60,11 +62,10 @@ var _ = Describe("visiting", func() {
 
 	It("sorts labelled nodes", func() {
 		_, _, children := DefaultVisitor.Get(reflect.ValueOf(mapp))
-		label := DefaultVisitor.Label(children.Index(0))
 		cs := sortNodes(DefaultVisitor, children, true)
 		Expect(cs).ToNot(Equal(children))
 		Expect(cs.Len()).To(Equal(3))
-		label = DefaultVisitor.Label(cs.Index(0))
+		label := DefaultVisitor.Label(cs.Index(0))
 		Expect(label).To(Equal("child 1"))
 	})
 
@@ -137,6 +138,7 @@ var _ = Describe("visiting", func() {
 
 		Describe("structs of roots", func() {
 			It("panics on unknown root asciitree tags", func() {
+				// nolint structcheck
 				type RS struct {
 					fake bool `asciitree:"foobar"`
 				}

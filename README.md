@@ -1,5 +1,7 @@
 # asciitree
 
+[![GoDoc](https://godoc.org/github.com/TheDiveO/go-asciitree?status.svg)](http://godoc.org/github.com/TheDiveO/go-asciitree)
+
 `asciitree` is a Go package for simple pretty-printing of tree-like
 data structures using pure ASCII "edges" or alternatively Unicode characters
 for drawing branches and edges.
@@ -17,11 +19,6 @@ for drawing branches and edges.
 Nodes can optionally be sorted by their labels. In addition, nodes may have
 properties (these are flat, so no properties of properties). These properties
 can also optionally be sorted.
-
-## Documentation
-
-For examples and all the details, please see the [asciitree
-godocs](https://godoc.org/github.com/TheDiveO/go-asciitree).
 
 ## Copyright and License
 

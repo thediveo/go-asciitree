@@ -183,6 +183,7 @@ root1
 
 	It("panics when rendering incorrect node", func() {
 		Expect(func() {
+			// nolint structcheck
 			type badNode struct {
 				foo bool
 			}

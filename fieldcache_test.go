@@ -46,6 +46,7 @@ var _ = Describe("field index cache", func() {
 	})
 
 	It("finds struct field indices (even embedded anonymous ones)", func() {
+		// nolint structcheck
 		type X struct {
 			bar int
 		}
@@ -99,6 +100,7 @@ var _ = Describe("field index cache", func() {
 		}
 		Expect(func() { structInfo(reflect.ValueOf(SKO4{})) }).To(Panic())
 
+		// nolint structcheck
 		type TL struct {
 			laberl string `asciitree:"label"`
 		}
@@ -108,6 +110,7 @@ var _ = Describe("field index cache", func() {
 		}
 		Expect(func() { structInfo(reflect.ValueOf(SKO666{})) }).To(Panic())
 
+		// nolint structcheck
 		type TL2 struct {
 			prups string `asciitree:"properties"`
 		}
@@ -117,6 +120,7 @@ var _ = Describe("field index cache", func() {
 		}
 		Expect(func() { structInfo(reflect.ValueOf(SKO667{})) }).To(Panic())
 
+		// nolint structcheck
 		type TL3 struct {
 			kinners string `asciitree:"children"`
 		}
@@ -126,6 +130,7 @@ var _ = Describe("field index cache", func() {
 		}
 		Expect(func() { structInfo(reflect.ValueOf(SKO668{})) }).To(Panic())
 
+		// nolint structcheck
 		type TL4 struct {
 			absoluterrotz string `asciitree:"roots"`
 		}
