@@ -1,7 +1,7 @@
 # asciitree
 
 [![GoDoc](https://godoc.org/github.com/TheDiveO/go-asciitree?status.svg)](http://godoc.org/github.com/TheDiveO/go-asciitree)
-![GitHub](https://img.shields.io/github/license/thediveo/go-asciitree)
+[![GitHub](https://img.shields.io/github/license/thediveo/go-asciitree)](https://img.shields.io/github/license/thediveo/go-asciitree)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/go-asciitree)](https://goreportcard.com/report/github.com/thediveo/go-asciitree)
 
 `asciitree` is a Go package for simple pretty-printing of tree-like
