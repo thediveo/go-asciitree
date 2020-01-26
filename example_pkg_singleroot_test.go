@@ -17,12 +17,12 @@ func Example() {
 	root := node{
 		Label: "root",
 		Children: []node{
-			node{Label: "child 1", Props: []string{"childish"}},
-			node{Label: "child 2", Children: []node{
-				node{Label: "grandchild 1", Props: []string{"very childish"}},
-				node{Label: "grandchild 2"},
+			{Label: "child 1", Props: []string{"childish"}},
+			{Label: "child 2", Children: []node{
+				{Label: "grandchild 1", Props: []string{"very childish"}},
+				{Label: "grandchild 2"},
 			}},
-			node{Label: "child 3"},
+			{Label: "child 3"},
 		},
 	}
 	// render the tree into a string and print it.

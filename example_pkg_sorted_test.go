@@ -17,18 +17,18 @@ func Example_sorted() {
 	rootb := node{
 		Label: "beta root",
 		Children: []node{
-			node{Label: "foo", Props: []string{"childish"}},
-			node{Label: "alpha", Children: []node{
-				node{Label: "grandchild 2"},
-				node{Label: "grandchild 1", Props: []string{"very childish"}},
+			{Label: "foo", Props: []string{"childish"}},
+			{Label: "alpha", Children: []node{
+				{Label: "grandchild 2"},
+				{Label: "grandchild 1", Props: []string{"very childish"}},
 			}},
-			node{Label: "bar"},
+			{Label: "bar"},
 		},
 	}
 	roota := node{
 		Label: "alpha root",
 		Children: []node{
-			node{Label: "alphachild"},
+			{Label: "alphachild"},
 		},
 	}
 	// create a new visitor and tell it to sort the nodes by label, and also

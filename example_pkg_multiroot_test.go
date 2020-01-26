@@ -15,21 +15,21 @@ func Example_multiRoot() {
 	}
 	// set up two root nodes with their own tree of child nodes
 	roots := []node{
-		node{
+		{
 			Label: "root 1",
 			Children: []node{
-				node{Label: "child 1", Props: []string{"childish"}},
-				node{Label: "child 2", Children: []node{
-					node{Label: "grandchild 1", Props: []string{"very childish"}},
-					node{Label: "grandchild 2"},
+				{Label: "child 1", Props: []string{"childish"}},
+				{Label: "child 2", Children: []node{
+					{Label: "grandchild 1", Props: []string{"very childish"}},
+					{Label: "grandchild 2"},
 				}},
-				node{Label: "child 3"},
+				{Label: "child 3"},
 			},
 		},
-		node{
+		{
 			Label: "root 2",
 			Children: []node{
-				node{Label: "child 2-1"},
+				{Label: "child 2-1"},
 			},
 		},
 	}

@@ -16,12 +16,12 @@ func ExampleRender() {
 	root := tree{
 		Label: "root",
 		Children: []tree{
-			tree{Label: "child 1"},
-			tree{Label: "child 2", Children: []tree{
-				tree{Label: "grandchild 1"},
-				tree{Label: "grandchild 2"},
+			{Label: "child 1"},
+			{Label: "child 2", Children: []tree{
+				{Label: "grandchild 1"},
+				{Label: "grandchild 2"},
 			}},
-			tree{Label: "child 3"},
+			{Label: "child 3"},
 		},
 	}
 	// render the tree into a string and print it.
@@ -48,12 +48,12 @@ func ExampleRenderPlain() {
 	root := tree{
 		Label: "root",
 		Children: []tree{
-			tree{Label: "child 1"},
-			tree{Label: "child 2", Children: []tree{
-				tree{Label: "grandchild 1"},
-				tree{Label: "grandchild 2"},
+			{Label: "child 1"},
+			{Label: "child 2", Children: []tree{
+				{Label: "grandchild 1"},
+				{Label: "grandchild 2"},
 			}},
-			tree{Label: "child 3"},
+			{Label: "child 3"},
 		},
 	}
 	// render the tree into a string and print it.
@@ -77,12 +77,12 @@ func ExampleRenderFancy() {
 	root := tree{
 		Label: "root",
 		Children: []tree{
-			tree{Label: "child 1"},
-			tree{Label: "child 2", Children: []tree{
-				tree{Label: "grandchild 1"},
-				tree{Label: "grandchild 2"},
+			{Label: "child 1"},
+			{Label: "child 2", Children: []tree{
+				{Label: "grandchild 1"},
+				{Label: "grandchild 2"},
 			}},
-			tree{Label: "child 3"},
+			{Label: "child 3"},
 		},
 	}
 	// render the tree into a string and print it.

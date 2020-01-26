@@ -33,8 +33,8 @@ var _ = Describe("visiting", func() {
 	tree := S{
 		Foo: "root",
 		Baz: []S{
-			S{Foo: "2"},
-			S{Foo: "1"},
+			{Foo: "2"},
+			{Foo: "1"},
 		},
 	}
 
@@ -54,9 +54,9 @@ var _ = Describe("visiting", func() {
 		"label":      "root",
 		"properties": []string{"someprop: value"},
 		"children": []M{
-			M{"label": "child 3"},
-			M{"label": "child 2", "properties": []string{"foo", "bar"}},
-			M{"label": "child 1"},
+			{"label": "child 3"},
+			{"label": "child 2", "properties": []string{"foo", "bar"}},
+			{"label": "child 1"},
 		},
 	}
 

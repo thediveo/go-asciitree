@@ -1,7 +1,7 @@
 {
 	"folders": [
 		{
-			"path": ".."
+			"path": "."
 		}
 	],
 	"settings": {
@@ -11,5 +11,9 @@
 			"coveredHighlightColor": "rgba(0,64,0,0.05)",
 			"uncoveredHighlightColor": "rgba(128,0,0,0.1)"
 		},
+		"go.formatTool": "gofmt",
+		"go.formatFlags": [
+			"-s"
+		],
 	}
 }

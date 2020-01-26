@@ -35,18 +35,18 @@ var _ = Describe("asciitree", func() {
 		Name:       "root1",
 		Properties: []string{"foo", "bar"},
 		Subnodes: []*Node{
-			&Node{Name: "1"},
-			&Node{
+			{Name: "1"},
+			{
 				Name: "2",
 				Subnodes: []*Node{
-					&Node{Name: "2.1", Properties: []string{"whoooosh"}},
-					&Node{Name: "2.2"},
+					{Name: "2.1", Properties: []string{"whoooosh"}},
+					{Name: "2.2"},
 				},
 			},
-			&Node{
+			{
 				Name: "3",
 				Subnodes: []*Node{
-					&Node{Name: "3.1"},
+					{Name: "3.1"},
 				},
 			},
 		},
@@ -54,27 +54,27 @@ var _ = Describe("asciitree", func() {
 	rootnode2 := Node{
 		Name: "root2",
 		Subnodes: []*Node{
-			&Node{Name: "X"},
+			{Name: "X"},
 		},
 	}
 	type M map[string]interface{}
 	rootmap := M{
 		"roots": []M{
-			M{"label": "root1", "properties": []string{"foo", "bar"}, "children": []M{
-				M{"label": "1"},
-				M{"label": "2", "children": []M{
-					M{"label": "2.2"},
-					M{"label": "2.1", "properties": []string{"whoooosh"}},
+			{"label": "root1", "properties": []string{"foo", "bar"}, "children": []M{
+				{"label": "1"},
+				{"label": "2", "children": []M{
+					{"label": "2.2"},
+					{"label": "2.1", "properties": []string{"whoooosh"}},
 				}},
-				M{"label": "3", "children": []M{
-					M{"label": "3.1"},
+				{"label": "3", "children": []M{
+					{"label": "3.1"},
 				}},
 			}},
-			M{"label": "alpharot", "properties": []string{"z", "a"}},
+			{"label": "alpharot", "properties": []string{"z", "a"}},
 		},
 	}
 	rootmap2 := M{"label": "root", "properties": []string{"pr"}, "children": []M{
-		M{"label": "1", "properties": []string{"p1", "p2"}},
+		{"label": "1", "properties": []string{"p1", "p2"}},
 	}}
 
 	ts := NewTreeStyler(LineStyle)
