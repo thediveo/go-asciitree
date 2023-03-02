@@ -1,9 +1,9 @@
 # asciitree
 
-[![GoDoc](https://godoc.org/github.com/thediveo/go-asciitree?status.svg)](http://godoc.org/github.com/thediveo/go-asciitree)
-[![GitHub](https://img.shields.io/github/license/thediveo/go-asciitree)](https://img.shields.io/github/license/thediveo/go-asciitree)
+[![Go Reference](https://pkg.go.dev/badge/github.com/thediveo/go-asciitree.svg)](https://pkg.go.dev/github.com/thediveo/go-asciitree)
 ![build and test](https://github.com/thediveo/go-asciitree/workflows/build%20and%20test/badge.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/go-asciitree)](https://goreportcard.com/report/github.com/thediveo/go-asciitree)
+![Coverage](https://img.shields.io/badge/Coverage-100.0%25-brightgreen)
 
 `asciitree` is a Go package for simple pretty-printing of tree-like
 data structures using pure ASCII "edges" or alternatively Unicode characters
@@ -25,5 +25,5 @@ can also optionally be sorted.
 
 ## Copyright and License
 
-`asciitree` is Copyright 2018 Harald Albrecht, and licensed under the Apache
-License, Version 2.0.
+`asciitree` is Copyright 2018‒2023 Harald Albrecht, and licensed under the
+Apache License, Version 2.0.
