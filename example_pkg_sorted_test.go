@@ -3,7 +3,7 @@ package asciitree_test
 import (
 	"fmt"
 
-	asciitree "github.com/thediveo/go-asciitree"
+	asciitree "github.com/thediveo/go-asciitree/v2"
 )
 
 func Example_sorted() {

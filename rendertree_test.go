@@ -181,20 +181,9 @@ root1
 		Expect(func() { Render([]int{42}, DefaultVisitor, ts) }).To(Panic())
 	})
 
-	It("panics when rendering incorrect node", func() {
-		Expect(func() {
-			// nolint structcheck
-			type badNode struct {
-				foo bool
-			}
-			Render(badNode{}, DefaultVisitor, ts)
-		}).To(Panic())
-		Expect(func() {
-			type badNode struct {
-				Foo bool `asciitree:"foo"`
-			}
-			Render(badNode{}, DefaultVisitor, ts)
-		}).To(Panic())
+	It("renders nothing when given a bad node", func() {
+		type badNode struct{}
+		Expect(Render(badNode{}, DefaultVisitor, ts)).To(Equal("\n"))
 	})
 
 })

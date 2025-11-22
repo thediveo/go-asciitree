@@ -16,6 +16,7 @@ package asciitree
 
 import (
 	"reflect"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,122 +24,61 @@ import (
 
 var _ = Describe("field index cache", func() {
 
-	It("validates asciitree tags", func() {
-		vals, ok := asciitreeTagValues("")
-		Expect(ok).To(BeTrue())
-		Expect(vals).To(BeEmpty())
+	DescribeTable("checking asciitree tags",
+		func(tag, value string, expected bool) {
+			field := reflect.StructField{
+				Tag: reflect.StructTag(tag),
+			}
+			Expect(hasAsciitreeTagValue(field, value)).To(Equal(expected))
+		},
+		Entry(nil, `foo:"bar"`, "", false),
+		Entry(nil, `foo:"bar" asciitree:"label"`, "label", true),
+		Entry(nil, `foo:"bar" asciitree:"foo"`, "label", false),
+	)
 
-		vals, ok = asciitreeTagValues(",   ,, ")
-		Expect(ok).To(BeTrue())
-		Expect(vals).To(BeEmpty())
+	When("looking up types in the cache", func() {
 
-		vals, ok = asciitreeTagValues(" label")
-		Expect(ok).To(BeTrue())
-		Expect(vals).To(Equal([]string{"label"}))
+		var cache *sync.Map
 
-		vals, ok = asciitreeTagValues("roots,label,properties,children")
-		Expect(ok).To(BeTrue())
-		Expect(vals).To(Equal([]string{"roots", "label", "properties", "children"}))
+		BeforeEach(func() {
+			cache = new(sync.Map)
+		})
 
-		vals, ok = asciitreeTagValues("label,foo,bar")
-		Expect(ok).To(BeFalse())
-		Expect(vals).To(Equal([]string{"foo", "bar"}))
-	})
+		It("returns nil for non-struct values", func() {
+			Expect(structInfoCache(cache, reflect.ValueOf(42))).To(BeNil())
+		})
 
-	It("finds struct field indices (even embedded anonymous ones)", func() {
-		// nolint structcheck
-		type X struct {
-			bar int
-		}
+		It("shrugs when there are no magic fields", func() {
+			type T struct {
+				foo int
+			}
+			si := structInfoCache(cache, reflect.ValueOf(T{foo: 42}))
+			Expect(si).To(And(
+				HaveField("LabelPath", BeNil()),
+				HaveField("PropertiesPath", BeNil()),
+				HaveField("ChildrenPath", BeNil()),
+				HaveField("RootsPath", BeNil())))
+			siAgain := structInfoCache(cache, reflect.ValueOf(T{}))
+			Expect(siAgain).To(BeIdenticalTo(si))
+		})
 
-		si := structInfo(reflect.ValueOf(42))
-		Expect(si).To(BeNil())
-
-		fieldCache = make(map[reflect.Type]*fieldCacheItem)
-		si = structInfo(reflect.ValueOf(X{}))
-		Expect(len(fieldCache)).To(Equal(1))
-		Expect(*si).To(Equal(fieldCacheItem{-1, -1, -1, -1}))
-
-		type S struct {
-			X
-			Foo  string   `asciitree:"label"`
-			Poop []string `asciitree:"properties"`
-			Baz  []S      `asciitree:"children"`
-			Rotz []S      `asciitree:"roots"`
-		}
-		si = structInfo(reflect.ValueOf(S{}))
-		Expect(*si).To(Equal(fieldCacheItem{1, 2, 3, 4}))
-
-		type SKO struct {
-			S
-			Rootz []S `asciitree:"roots"`
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO{})) }).To(Panic())
-
-		type SOK struct {
-			S     S
-			Rootz []S `asciitree:"roots"`
-		}
-		Expect(func() { si = structInfo(reflect.ValueOf(SOK{})) }).ToNot(Panic())
-		Expect(*si).To(Equal(fieldCacheItem{-1, -1, -1, 1}))
-
-		type SKO2 struct {
-			S
-			Ohno bool `asciitree:"label"`
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO2{})) }).To(Panic())
-
-		type SKO3 struct {
-			S
-			Ohno bool `asciitree:"properties"`
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO3{})) }).To(Panic())
-
-		type SKO4 struct {
-			S
-			Ohno bool `asciitree:"children"`
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO4{})) }).To(Panic())
-
-		// nolint structcheck
-		type TL struct {
-			laberl string `asciitree:"label"`
-		}
-		type SKO666 struct {
-			S
-			TL
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO666{})) }).To(Panic())
-
-		// nolint structcheck
-		type TL2 struct {
-			prups string `asciitree:"properties"`
-		}
-		type SKO667 struct {
-			S
-			TL2
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO667{})) }).To(Panic())
-
-		// nolint structcheck
-		type TL3 struct {
-			kinners string `asciitree:"children"`
-		}
-		type SKO668 struct {
-			S
-			TL3
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO668{})) }).To(Panic())
-
-		// nolint structcheck
-		type TL4 struct {
-			absoluterrotz string `asciitree:"roots"`
-		}
-		type SKO669 struct {
-			S
-			TL4
-		}
-		Expect(func() { structInfo(reflect.ValueOf(SKO669{})) }).To(Panic())
+		It("finds magic fields", func() {
+			type T struct {
+				Foo string `asciitree:"label"`
+			}
+			type U struct {
+				Bar int
+				Baz []string `asciitree:"properties"`
+				T
+				Coolz []U `asciitree:"children"`
+				Ruhtz []T `asciitree:"roots"`
+			}
+			Expect(structInfoCache(cache, reflect.ValueOf(U{}))).To(And(
+				HaveField("LabelPath", HaveExactElements(2, 0)),
+				HaveField("PropertiesPath", HaveExactElements(1)),
+				HaveField("ChildrenPath", HaveExactElements(3)),
+				HaveField("RootsPath", HaveExactElements(4))))
+		})
 
 	})
 

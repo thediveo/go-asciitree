@@ -15,128 +15,87 @@
 package asciitree
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
+	"slices"
+	"sync"
 )
 
-// Caches the label and children field indices for a specific reflection type.
-// Oh, and properties, and ... roots (to unify things slightly).
-type fieldCacheItem struct {
-	labelIndex      int
-	propertiesIndex int
-	childrenIndex   int
-	rootsIndex      int
+// structFields caches certain field indices relevant to rendering trees from
+// structs, such as the label field, the properties and children fields, and (if
+// any) the roots field.
+type structFields struct {
+	LabelPath      []int // indices path of label field, or nil.
+	PropertiesPath []int // indices path of properties field, or nil.
+	ChildrenPath   []int // indices path of children field, or nil.
+	RootsPath      []int // indices path of roots field, or nil.
 }
 
-// Cache for quickly looking up the label, children field indices for a given
-// reflection type.
-var fieldCache = make(map[reflect.Type]*fieldCacheItem)
+// structFieldsCache is our program-global cache for quickly looking up the
+// relevant field indices for a particular type.
+var structFieldsCache sync.Map
 
-// Returns the field indices for tagged structs, based on a specific node. We
-// employ caching in order to avoid finding the fields (field indices) over
+// Returns the field indices for tagged structs, based on a specific node type.
+// We employ caching in order to avoid finding the fields (field indices) over
 // and over again, especially for mono-type struct trees.
-func structInfo(node reflect.Value) (sinfo *fieldCacheItem) {
+func structFieldInfo(node reflect.Value) *structFields {
+	return structInfoCache(&structFieldsCache, node)
+}
+
+func structInfoCache(cache *sync.Map, node reflect.Value) *structFields {
 	if node.Kind() != reflect.Struct {
 		return nil
 	}
 	// Try to look up this (struct) type from the cache, if already known.
-	typ := node.Type()
-	sinfo, found := fieldCache[typ]
-	if found {
-		return
+	structT := node.Type()
+	if sf, ok := cache.Load(structT); ok {
+		return sf.(*structFields)
 	}
 	// This struct type is yet unknown, so scan the type's fields for
 	// asciitree tags, and if found and valid, then learn the field indices.
-	sinfo = &fieldCacheItem{
-		labelIndex:      -1,
-		propertiesIndex: -1,
-		childrenIndex:   -1,
-		rootsIndex:      -1,
-	}
-	for idx := 0; idx < typ.NumField(); idx++ {
-		field := typ.Field(idx)
-		if field.Type.Kind() == reflect.Struct && field.Anonymous {
-			// Oops, it's an anonymous embedded struct, so we need to check that too!
-			anon := structInfo(node.Field(idx))
-			if anon.labelIndex >= 0 {
-				if sinfo.labelIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"label\" tag for anonymously embedded type %T", field))
-				}
-				sinfo.labelIndex = anon.labelIndex
-			}
-			if anon.propertiesIndex >= 0 {
-				if sinfo.propertiesIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"properties\" tag for anonymously embedded type %T", field))
-				}
-				sinfo.propertiesIndex = anon.propertiesIndex
-			}
-			if anon.childrenIndex >= 0 {
-				if sinfo.childrenIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"children\" tag for anonymously embedded type %T", field))
-				}
-				sinfo.childrenIndex = anon.childrenIndex
-			}
-			if anon.rootsIndex >= 0 {
-				if sinfo.rootsIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"roots\" tag for anonymously embedded type %T", field))
-				}
-				sinfo.rootsIndex = anon.rootsIndex
-			}
-		}
-		tags, ok := asciitreeTagValues(typ.Field(idx).Tag.Get("asciitree"))
-		if !ok {
-			panic(fmt.Sprintf("invalid asciitree tag(s) %v", tags))
-		}
-		for _, tag := range tags {
-			switch tag {
-			case "label":
-				if sinfo.labelIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"label\" tag for type %T", node))
-				}
-				sinfo.labelIndex = idx
-			case "properties":
-				if sinfo.propertiesIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"properties\" tag for type %T", node))
-				}
-				sinfo.propertiesIndex = idx
-			case "children":
-				if sinfo.childrenIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"children\" tag for type %T", node))
-				}
-				sinfo.childrenIndex = idx
-			case "roots":
-				if sinfo.rootsIndex >= 0 {
-					panic(fmt.Sprintf("double ascii:\"roots\" tag for type %T", node))
-				}
-				sinfo.rootsIndex = idx
-			}
-		}
-	}
-	fieldCache[typ] = sinfo // cache it.
-	return
+	newsf := &structFields{}
+	findFieldsRecursively(structT, nil, newsf)
+	sf, _ := cache.LoadOrStore(structT, newsf)
+	return sf.(*structFields)
 }
 
-// Returns the (split) tag values of an asciitree tag if they are valid,
-// together with an "ok" indication. Otherwise, returns the invalid tag values
-// (and only those) with a "nok".
-func asciitreeTagValues(tagval string) ([]string, bool) {
-	vals := strings.Split(tagval, ",")
-	errors := []string{}
-	values := make([]string, 0, len(vals))
-	for _, value := range vals {
-		value = strings.TrimSpace(value)
-		if len(value) > 0 {
-			switch value {
-			case "roots", "label", "properties", "children":
-				values = append(values, value)
-			default:
-				errors = append(errors, value)
-			}
+// findsFieldsRecursively locates fields marked as label, properties, children,
+// and roots fields, recording their indices paths in the referenced
+// structFields value. It recursively descends into anonymous structures fields,
+// in a depth first manner, but it does not descend into any named structure
+// fields.
+func findFieldsRecursively(structT reflect.Type, path []int, sf *structFields) {
+	for fieldIdx := range structT.NumField() {
+		field := structT.Field(fieldIdx)
+		if field.Anonymous && field.Type.Kind() == reflect.Struct {
+			// we need to dig deeper; please note that this is a non-concurrent
+			// use of the path parameter, so we're safe to just use append here
+			// without explicit cloning first, as it is fine to reuse the
+			// backing array.
+			findFieldsRecursively(field.Type, append(path, fieldIdx), sf)
+			continue
+		}
+		if sf.LabelPath == nil && hasAsciitreeTagValue(field, "label") {
+			sf.LabelPath = append(slices.Clone(path), fieldIdx)
+			continue
+		}
+		if sf.PropertiesPath == nil && hasAsciitreeTagValue(field, "properties") {
+			sf.PropertiesPath = append(slices.Clone(path), fieldIdx)
+			continue
+		}
+		if sf.ChildrenPath == nil && hasAsciitreeTagValue(field, "children") {
+			sf.ChildrenPath = append(slices.Clone(path), fieldIdx)
+			continue
+		}
+		if sf.RootsPath == nil && hasAsciitreeTagValue(field, "roots") {
+			sf.RootsPath = append(slices.Clone(path), fieldIdx)
+			continue
 		}
 	}
-	if len(errors) > 0 {
-		return errors, false
-	}
-	return values, true
+}
+
+// hasAsciitreeTagValue returns true, if the passed field has the "asciitree" tag
+// with the specified value; otherwise false.
+func hasAsciitreeTagValue(field reflect.StructField, value string) bool {
+	v, ok := field.Tag.Lookup("asciitree")
+	return ok && v == value
 }
