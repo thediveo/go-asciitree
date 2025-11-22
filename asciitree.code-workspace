@@ -5,7 +5,7 @@
 		}
 	],
 	"settings": {
-		"go.lintTool": "golangci-lint",
+		"go.lintTool": "golangci-lint-v2",
 		"go.coverageDecorator": {
 			"type": "highlight",
 			"coveredHighlightColor": "rgba(0,64,0,0.05)",
