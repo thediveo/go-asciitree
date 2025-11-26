@@ -17,11 +17,13 @@ package asciitree
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
+	"strings"
 )
 
 // Visitor looks into user-defined data structures, trying to locate the
-// anointed, erm, annotated ("tagged") user-data entries which represent node
+// anointed, erm, annotated (“tagged”) user-data entries which represent node
 // labels, properties, and children. The Visitor interface is used by tree
 // renderers for visiting nodes in order to retrieve their tree-relevant
 // information while traversing trees.
@@ -34,9 +36,9 @@ import (
 // Please note that Visitors do not traverse; that is the job of the asciitree
 // Render...() functions.
 type Visitor interface {
-	Roots(roots reflect.Value) (children []reflect.Value)
-	Label(node reflect.Value) (label string)
-	Get(node reflect.Value) (label string, properties []string, children reflect.Value)
+	Roots(roots any) (children []any)
+	Label(node any) (label string)
+	Get(node any) (label string, properties []string, children []any)
 }
 
 // DefaultVisitor provides visitor capable of traversing (annotated) maps and
@@ -53,6 +55,8 @@ type MapStructVisitor struct {
 	SortProperties bool
 }
 
+var _ Visitor = (*MapStructVisitor)(nil)
+
 // NewMapStructVisitor creates a visitor that optionally sorts nodes and their
 // properties.
 func NewMapStructVisitor(sortNodes bool, sortProperties bool) *MapStructVisitor {
@@ -62,193 +66,177 @@ func NewMapStructVisitor(sortNodes bool, sortProperties bool) *MapStructVisitor 
 // Roots returns the list of root nodes, while handling different types of
 // Roots data types; for instance, struct, []struct, map, and []map, as well
 // as pointers.
-func (v *MapStructVisitor) Roots(roots reflect.Value) (children []reflect.Value) {
-	roots = reflect.Indirect(roots)
-	switch roots.Kind() {
-	// For a slice we need to iterate over all elements, so we return all
-	// elements as the list of "children". If this visitor is configured to
-	// sort by label, then we also need to sort the roots; we can do the
-	// sorting in place, as we already had to create a shallow slice copy of
-	// root/children anyway.
+func (v *MapStructVisitor) Roots(roots any) []any {
+	switch rv := reflect.Indirect(reflect.ValueOf(roots)); rv.Kind() {
 	case reflect.Slice:
-		count := roots.Len()
-		children = make([]reflect.Value, count)
-		for idx := 0; idx < count; idx++ {
-			children[idx] = roots.Index(idx)
+		// For a slice we need to iterate over all elements, so we return all
+		// elements as the list of "children". If this visitor is configured to
+		// sort by label, then we also need to sort the roots.
+		roots := anySlice(rv)
+		if !v.SortNodes {
+			return roots
 		}
-		if v.SortNodes {
-			sortNodes(v, reflect.ValueOf(children), false)
-		}
-		return
-	// A single root can be represented via a single struct for convenience,
-	// so simply return a list of "children" consisting only of this single
-	// struct itself.
+		return v.sortedNodes(roots)
 	case reflect.Struct:
-		fci := structInfo(roots)
-		if fci.rootsIndex >= 0 {
-			return v.Roots(roots.Field(fci.rootsIndex))
+		// A single root can be represented via a single struct for convenience,
+		// so simply return a list of "children" consisting only of this single
+		// struct itself.
+		si := structFieldInfo(rv)
+		if si.RootsPath == nil {
+			return []any{roots}
 		}
-		return []reflect.Value{roots}
-	// Moreover, roots can also be stored in a map using a well-known key
-	// named "roots". If that key is present, then it must be a list of
-	// children, otherwise return a list of children consisting only if
-	// this map itself because it's already a child.
+		return v.Roots(rv.FieldByIndex(si.RootsPath).Interface())
 	case reflect.Map:
-		maproots := roots.MapIndex(reflect.ValueOf("roots"))
+		// Finally, roots can also be stored in a map using a well-known key
+		// named "roots". If that key is present, then it must be a list of
+		// children, otherwise return a list of children consisting only if this
+		// map itself because it's already a child.
+		maproots := rv.MapIndex(reflect.ValueOf("roots"))
 		switch maproots.Kind() {
-		// Nope, no such "roots" key, so the root given is the only one root
-		// node itself, so return it as a list of exactly one root node.
 		case reflect.Invalid:
-			return []reflect.Value{roots}
-		// The roots element may be represented by map or struct, or it might
-		// be a slice of them; especially due to the latter case we have to
-		// create a Value slice with the individual elements from the "roots"
-		// property. Unfortunately, we cannot simply return the slice Value
-		// itself, but instead need to create a new slice of Values
-		// referencing the elements of the original slice.
+			// Nope, no such "roots" key, so the root given is the only one root
+			// node itself, so return it as a list of exactly one root node.
+			return []any{roots}
 		default:
+			// The roots element may be represented by map or struct, or it might
+			// be a slice of them; especially due to the latter case we have to
+			// create a Value slice with the individual elements from the "roots"
+			// property. Unfortunately, we cannot simply return the slice Value
+			// itself, but instead need to create a new slice of Values
+			// referencing the elements of the original slice.
 			elem := maproots.Elem()
 			if elem.Kind() == reflect.Slice {
-				return v.Roots(elem)
+				return v.Roots(elem.Interface())
 			}
-			return []reflect.Value{reflect.Indirect(maproots)}
+			return []any{reflect.Indirect(maproots).Interface()}
 		}
 	default:
-		panic(fmt.Sprintf("unsupported roots type %q", roots.Kind()))
+		panic(fmt.Sprintf("expecting roots to be a slice, struct, or map, but got %T", roots))
 	}
 }
 
 // Label returns the label for a tree node.
-func (v *MapStructVisitor) Label(node reflect.Value) (label string) {
-	label, _, _ = getNodeData(v, node, true)
-	return
+func (v *MapStructVisitor) Label(node any) (label string) {
+	return v.nodeLabel(node)
 }
 
 // Get returns the label, properties, and children of a tree node, hiding
 // pesty details about how to fetch them from tagged structs or maps with
 // well-known fields.
-func (v *MapStructVisitor) Get(node reflect.Value) (label string, properties []string, children reflect.Value) {
-	label, properties, children = getNodeData(v, node, false)
+func (v *MapStructVisitor) Get(node any) (label string, properties []string, children []any) {
+	label, properties, children = v.nodeDetails(node)
 	if v.SortProperties {
+		properties = slices.Clone(properties)
 		sort.Strings(properties)
 	}
-	return
+	return label, properties, children
+}
+
+func (v *MapStructVisitor) nodeLabel(node any) string {
+	switch node := reflect.Indirect(reflect.ValueOf(node)); node.Kind() {
+	case reflect.Struct:
+		si := structFieldInfo(node)
+		if si.LabelPath == nil {
+			return ""
+		}
+		return node.FieldByIndex(si.LabelPath).String()
+	case reflect.Map:
+		labelV := node.MapIndex(reflect.ValueOf("label"))
+		if labelV.Kind() == reflect.Interface {
+			labelV = labelV.Elem()
+		}
+		if labelV.Kind() != reflect.String {
+			return ""
+		}
+		return labelV.Interface().(string)
+	default:
+		panic(fmt.Sprintf("unsupported asciitree node or root type %T", node.Interface()))
+	}
 }
 
 // Internal helper to either only retrieve the label for a node, or the label,
 // properties, and children. Please note that we don't sort here; this is
 // really only the helper for retrieving.
-func getNodeData(v *MapStructVisitor, node reflect.Value, labelOnly bool) (label string, properties []string, children reflect.Value) {
-	node = reflect.Indirect(node)
-	switch node.Kind() {
-	// Gets the fields for label, properties, and children in a struct; all
-	// these fields are optional and will default to zeroed values if missing.
+func (v *MapStructVisitor) nodeDetails(node any) (label string, properties []string, children []any) {
+	switch node := reflect.Indirect(reflect.ValueOf(node)); node.Kind() {
 	case reflect.Struct:
 		// Grab the values for a node label, its properties, and its children,
-		// if there are fields known to have them -- based on their field
+		// if there are fields known to have them – based on their field
 		// tags.
-		fci := structInfo(node)
-		if fci.labelIndex >= 0 {
-			label = node.Field(fci.labelIndex).String()
+		si := structFieldInfo(node)
+		if si.LabelPath != nil {
+			label = node.FieldByIndex(si.LabelPath).String()
 		}
-		if !labelOnly {
-			if fci.propertiesIndex >= 0 {
-				properties = node.Field(fci.propertiesIndex).Interface().([]string)
-			}
-			if fci.childrenIndex >= 0 {
-				children = node.Field(fci.childrenIndex)
-				if v.SortNodes {
-					children = sortNodes(v, children, true)
-				}
-			}
+		if si.PropertiesPath != nil {
+			properties = node.FieldByIndex(si.PropertiesPath).Interface().([]string)
 		}
+		if si.ChildrenPath == nil {
+			return
+		}
+		children = anySlice(node.FieldByIndex(si.ChildrenPath))
+		if !v.SortNodes {
+			return
+		}
+		children = v.sortedNodes(children)
 		return
-	// Gets the (well-known) key-values for label, properties, and children in
-	// a map. Again, all these keys-values are optional and will default to
-	// zero if missing.
 	case reflect.Map:
+		// Gets the (well-known) key-values for label, properties, and children in
+		// a map. Again, all these keys-values are optional and will default to
+		// zero if missing.
 		if lbl := node.MapIndex(reflect.ValueOf("label")); lbl.Kind() != reflect.Invalid {
-			label = lbl.Interface().(string)
+			label, _ = lbl.Interface().(string)
 		}
 		if pps := node.MapIndex(reflect.ValueOf("properties")); pps.Kind() != reflect.Invalid {
-			properties = pps.Elem().Interface().([]string)
+			properties, _ = pps.Elem().Interface().([]string)
 		}
-		if !labelOnly {
-			if chs := node.MapIndex(reflect.ValueOf("children")); chs.Kind() != reflect.Invalid {
-				children = chs.Elem()
-				if v.SortNodes {
-					children = sortNodes(v, children, true)
-				}
-			} else {
-				children = reflect.ValueOf([]interface{}{})
+		if chs := node.MapIndex(reflect.ValueOf("children")); chs.Kind() != reflect.Invalid {
+			children = anySlice(chs)
+			if v.SortNodes {
+				children = v.sortedNodes(children)
 			}
 		}
 		return
 	default:
-		panic(fmt.Sprintf("unsupported asciitree node or root type %q: %v", node.Kind(), node))
+		panic(fmt.Sprintf("unsupported asciitree node or root type %T", node.Interface()))
 	}
 }
 
-// Data structure to sort a list of children (referenced by its dedicated
-// slice) by their labels. In order to speed up repeated label lookups during
-// sorting, we store the list of labels. However, we don't store the child
-// elements, but instead just reference the slice where the childs are finally
-// stored/referenced.
-type labelledNodes struct {
-	labels []string      // the discovered labels for the nodes (see next).
-	nodes  reflect.Value // reference to the nodes slice to be sorted.
+// sortedNodes returns a new slice of sorted nodes from the passed slice of
+// nodes, sorted by lexicographically by their labels.
+func (v *MapStructVisitor) sortedNodes(nodes []any) []any {
+	type labelledNode struct {
+		Label string
+		Node  any
+	}
+	l := len(nodes)
+	labelledNodes := make([]labelledNode, l)
+	for idx := range nodes {
+		labelledNodes[idx] = labelledNode{Label: v.Label(nodes[idx]), Node: nodes[idx]}
+	}
+	slices.SortStableFunc(labelledNodes, func(a, b labelledNode) int {
+		return strings.Compare(a.Label, b.Label)
+	})
+	sortednodes := make([]any, l)
+	for idx := range l {
+		sortednodes[idx] = labelledNodes[idx].Node
+	}
+	return sortednodes
 }
 
-// Returns number of children (interface sort.Interface).
-func (l labelledNodes) Len() int { return len(l.labels) }
-
-// Compares two child nodes by their labels (interface sort.Interface).
-func (l labelledNodes) Less(i, j int) bool { return l.labels[i] < l.labels[j] }
-
-// Swaps two child nodes (interface sort.Interface). Swapping the child references
-// that are in the form of reflect.Values is unfortunately slightly involved, as
-// a simple swap without an intermediate temporary would fail.
-func (l labelledNodes) Swap(i, j int) {
-	l.labels[i], l.labels[j] = l.labels[j], l.labels[i]
-	// We cannot simply swap two elements in a slice if they are more
-	// intricate types, such as strings, interfaces, maps, et cetera, as
-	// opposed to ints. See also: https://github.com/golang/go/issues/3126
-	// Instead, we need to dance around and sacrifice the Go(ds) of
-	// reflection.
-	temp := reflect.New(l.nodes.Index(i).Type()).Elem()
-	temp.Set(l.nodes.Index(i))
-	l.nodes.Index(i).Set(l.nodes.Index(j))
-	l.nodes.Index(j).Set(temp)
-}
-
-// Sorts the children by their labels. Optionally works on a copy, if needed.
-func sortNodes(v *MapStructVisitor, nodes reflect.Value, copy bool) reflect.Value {
-	nodes = reflect.Indirect(nodes)
-	// We don't need to dance around like mad when there's nothing to sort. In
-	// this case, leave the party early.
-	count := nodes.Len()
-	if count == 0 {
-		return nodes
+// anySlice returns an []any value whose elements are the slice elements
+// contained in the passed reflect.Value (unpacking an interface value where
+// necessary), or nil if the passed reflect.Value is not a slice.
+func anySlice(v reflect.Value) []any {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
 	}
-	// As we are going to sort in place, in some situations we will be asked
-	// by the caller to work on a copy instead, because otherwise we would
-	// mess with the user's data.
-	if copy {
-		n := reflect.MakeSlice(nodes.Type(), count, count)
-		reflect.Copy(n, nodes)
-		nodes = n
+	if v.Kind() != reflect.Slice {
+		return nil
 	}
-	// Fetch all labels for the nodes slice and then sort the nodes slice
-	// (this will happen "in place" with respect to the nodes slice).
-	list := labelledNodes{labels: make([]string, count), nodes: nodes}
-	for idx := 0; idx < count; idx++ {
-		elem, ok := nodes.Index(idx).Interface().(reflect.Value)
-		if ok {
-			list.labels[idx] = v.Label(elem)
-		} else {
-			list.labels[idx] = v.Label(nodes.Index(idx))
-		}
+	l := v.Len()
+	anyslice := make([]any, l)
+	for idx := range l {
+		anyslice[idx] = v.Index(idx).Interface()
 	}
-	sort.Sort(list)
-	return nodes
+	return anyslice
 }
