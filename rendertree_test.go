@@ -57,7 +57,7 @@ var _ = Describe("asciitree", func() {
 			{Name: "X"},
 		},
 	}
-	type M map[string]interface{}
+	type M map[string]any
 	rootmap := M{
 		"roots": []M{
 			{"label": "root1", "properties": []string{"foo", "bar"}, "children": []M{
