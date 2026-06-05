@@ -133,7 +133,7 @@ var _ = Describe("visiting", func() {
 	When("handling structs", func() {
 
 		type T struct {
-			bar        int    // nolint
+			bar        int    //nolint // unused, but serves the purpose of having an unexported field
 			MyLabel    string `asciitree:"label"`
 			MyChildren []T    `asciitree:"children"`
 		}

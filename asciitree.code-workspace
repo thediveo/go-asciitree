@@ -6,14 +6,33 @@
 	],
 	"settings": {
 		"go.lintTool": "golangci-lint-v2",
-		"go.coverageDecorator": {
-			"type": "highlight",
-			"coveredHighlightColor": "rgba(0,64,0,0.05)",
-			"uncoveredHighlightColor": "rgba(128,0,0,0.1)"
+		"go.alternateTools": {
+			"customFormatter": "golangci-lint-v2"
 		},
-		"go.formatTool": "gofmt",
+		"go.formatTool": "custom",
 		"go.formatFlags": [
-			"-s"
+			"fmt",
+			"--stdin"
 		],
-	}
+		"go.testTimeout": "300s",
+		"go.testFlags": [
+			"-v",
+			"-race",
+			"--",
+			"-ginkgo.v",
+			"-ginkgo.no-color"
+		],
+		"gopls": {
+			"ui.semanticTokens": true,
+			// https://github.com/golang/vscode-go/blob/master/docs/settings.md#uidiagnosticanalyses
+			"ui.diagnostic.analyses": {},
+			// https://github.com/golang/vscode-go/blob/master/docs/settings.md#uicodelenses
+			"ui.codelenses": {
+				"vulncheck": true,
+			}
+		},
+		"markdown.styles": [
+			"./.vscode/markdown-preview.css"
+		],
+	},
 }

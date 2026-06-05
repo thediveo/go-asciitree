@@ -58,5 +58,5 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Copyright and License
 
-`asciitree` is Copyright 2018‒2025 Harald Albrecht, and licensed under the
+`asciitree` is Copyright 2018‒2026 Harald Albrecht, and licensed under the
 Apache License, Version 2.0.
